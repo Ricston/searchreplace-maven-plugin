@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -36,7 +37,7 @@ import org.apache.maven.plugins.annotations.Parameter;
  */
 @Mojo(name = "searchreplace", defaultPhase = LifecyclePhase.PROCESS_SOURCES)
 public class SearchReplaceMojo extends AbstractMojo {
-	
+
 	public static final String SAME_TARGET_PATH_AS_SOURCE = "";
 
 	@Parameter(property = "sr.replaceString")
@@ -47,58 +48,59 @@ public class SearchReplaceMojo extends AbstractMojo {
 
 	@Parameter(property = "sr.targetPackage")
 	private String targetPackage;
-	
+
 	@Parameter(property = "sr.sourceDirectory", defaultValue = "${project.build.sourceDirectory}")
-    protected File sourceDirectory;
+	protected File sourceDirectory;
 
 	@Parameter(property = "sr.targetDirectoryPath")
-    protected String targetDirectoryPath = SAME_TARGET_PATH_AS_SOURCE;
+	protected String targetDirectoryPath = SAME_TARGET_PATH_AS_SOURCE;
 
 	public void execute() throws MojoExecutionException {
-		getLog().info("=======================");
-		getLog().info(String.format("${sr.replaceString}: %s", replaceString));
-		getLog().info(String.format("${sr.searchRegex}: %s", searchRegex));
-		getLog().info(String.format("${sr.targetPackage}: %s", targetPackage));
-		getLog().info(String.format("${sr.sourceDirectory}: %s", sourceDirectory));
-		getLog().info(String.format("${sr.targetDirectoryPath}: %s", targetDirectoryPath));
-		getLog().info("=======================");
-		
+		final Log log = getLog();
+		log.info("=======================");
+		log.info(String.format("${sr.replaceString}: %s", replaceString));
+		log.info(String.format("${sr.searchRegex}: %s", searchRegex));
+		log.info(String.format("${sr.targetPackage}: %s", targetPackage));
+		log.info(String.format("${sr.sourceDirectory}: %s", sourceDirectory));
+		log.info(String.format("${sr.targetDirectoryPath}: %s", targetDirectoryPath));
+		log.info("=======================");
+
 		final String targetPackageWithOsSeparator = targetPackage.replaceAll("\\.", File.separator);
 		final File directoryToProcess = new File(sourceDirectory.getAbsolutePath(), targetPackageWithOsSeparator);
-		getLog().info(String.format("directory to process: %s", directoryToProcess));
-		
+		log.info(String.format("directory to process: %s", directoryToProcess));
+
 		List<File> files = getFilesInFolder(directoryToProcess, new ArrayList<File>(100));
-		getLog().info(String.format("files to process: %s", files));
-		
-		for(final File file : files) {
+		log.info(String.format("files to process: %s", files));
+
+		for (final File file : files) {
 			try {
 				String content = new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
 				content = content.replaceAll(searchRegex, replaceString);
-				if(SAME_TARGET_PATH_AS_SOURCE.equals(targetDirectoryPath)) {
+				if (SAME_TARGET_PATH_AS_SOURCE.equals(targetDirectoryPath)) {
 					Path targetPath = file.toPath();
-					getLog().info(String.format("By default, writing [%s] to [%s]", file.getName(), targetPath));
+					log.info(String.format("By default, writing [%s] to [%s]", file.getName(), targetPath));
 					Files.write(targetPath, content.getBytes(StandardCharsets.UTF_8));
 				} else {
 					Path targetPath = new File(targetDirectoryPath, file.getName()).toPath();
-					getLog().info(String.format("Writing [%s] to [%s]", file.getName(), targetPath));
+					log.info(String.format("Writing [%s] to [%s]", file.getName(), targetPath));
 					Files.write(targetPath, content.getBytes(StandardCharsets.UTF_8));
 				}
 			} catch (IOException e) {
-				getLog().info(String.format("could not process %s", file.getName()));
+				log.info(String.format("could not process %s", file.getName()));
 				e.printStackTrace();
 			}
 		}
 	}
 
 	public List<File> getFilesInFolder(final File folder, List<File> files) {
-	    for (final File fileEntry : folder.listFiles()) {
-	        if (fileEntry.isDirectory()) {
-	            getFilesInFolder(fileEntry, files);
-	        } else {
-	            files.add(fileEntry);
-	        }
-	    }
-	    
-	    return files;
+		for (final File fileEntry : folder.listFiles()) {
+			if (fileEntry.isDirectory()) {
+				getFilesInFolder(fileEntry, files);
+			} else {
+				files.add(fileEntry);
+			}
+		}
+
+		return files;
 	}
 }
